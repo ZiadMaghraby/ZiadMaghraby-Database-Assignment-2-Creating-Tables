@@ -1,7 +1,6 @@
 # BidNile: Database Design & SQL Server DDL
 
-- **Name:** Ziad Maghraby
-- **Group / ID:** _to fill in_
+- **Name:** Ziad Elmaghraby
 
 | Task | File |
 |---|---|
