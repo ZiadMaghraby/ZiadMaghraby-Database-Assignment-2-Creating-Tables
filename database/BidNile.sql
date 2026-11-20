@@ -175,3 +175,132 @@ CREATE TABLE Sales.AuctionFollower
     CONSTRAINT PK_AuctionFollower PRIMARY KEY (MemberId, AuctionId)
 );
 GO
+
+USE BidNile;
+GO
+-- 3.1
+ALTER TABLE [Identity].Member ADD CONSTRAINT FK_Member_City FOREIGN KEY (CityId) REFERENCES Location.City (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE [Identity].Member ADD CONSTRAINT FK_Member_Inviter FOREIGN KEY (InvitedByMemberId) REFERENCES [Identity].Member (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE [Identity].Wallet ADD CONSTRAINT FK_Wallet_Member FOREIGN KEY (Id) REFERENCES [Identity].Member (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE Inventory.Warehouse ADD CONSTRAINT FK_Warehouse_City FOREIGN KEY (CityId) REFERENCES Location.City (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE Inventory.Warehouse ADD CONSTRAINT FK_Warehouse_Employee FOREIGN KEY (ManagerMemberId) REFERENCES Inventory.Employee (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE Inventory.Employee ADD CONSTRAINT FK_Employee_Member FOREIGN KEY (Id) REFERENCES [Identity].Member (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE Inventory.Employee ADD CONSTRAINT FK_Employee_Warehouse FOREIGN KEY (WarehouseId) REFERENCES Inventory.Warehouse (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE Inventory.Category ADD CONSTRAINT FK_Category_Category FOREIGN KEY (ParentCategoryId) REFERENCES Inventory.Category (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE Inventory.Item ADD CONSTRAINT FK_Item_Member FOREIGN KEY (SellerMemberId) REFERENCES [Identity].Member (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE Inventory.Item ADD CONSTRAINT FK_Item_Employee FOREIGN KEY (InspectorMemberId) REFERENCES Inventory.Employee (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE Inventory.Item ADD CONSTRAINT FK_Item_Category FOREIGN KEY (CategoryId) REFERENCES Inventory.Category (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE Inventory.Item ADD CONSTRAINT FK_Item_Warehouse FOREIGN KEY (WarehouseId) REFERENCES Inventory.Warehouse (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE Inventory.ItemPhoto ADD CONSTRAINT FK_ItemPhoto_Item FOREIGN KEY (ItemId) REFERENCES Inventory.Item (Id) ON DELETE CASCADE;
+GO
+-- 3.1
+ALTER TABLE Sales.Auction ADD CONSTRAINT FK_Auction_Item FOREIGN KEY (ItemId) REFERENCES Inventory.Item (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE Sales.Bid ADD CONSTRAINT FK_Bid_Auction FOREIGN KEY (AuctionId) REFERENCES Sales.Auction (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE Sales.Bid ADD CONSTRAINT FK_Bid_Member FOREIGN KEY (MemberId) REFERENCES [Identity].Member (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE Sales.AuctionFollower ADD CONSTRAINT FK_AuctionFollower_Member FOREIGN KEY (MemberId) REFERENCES [Identity].Member (Id) ON DELETE NO ACTION;
+GO
+-- 3.1
+ALTER TABLE Sales.AuctionFollower ADD CONSTRAINT FK_AuctionFollower_Auction FOREIGN KEY (AuctionId) REFERENCES Sales.Auction (Id) ON DELETE NO ACTION;
+GO
+-- 3.2
+ALTER TABLE [Identity].Member ADD AppLanguage CHAR(2) NOT NULL CONSTRAINT DF_Member_AppLanguage DEFAULT 'ar' CONSTRAINT CK_Member_AppLanguage CHECK (AppLanguage IN ('ar','en'));
+GO
+-- 3.3
+ALTER TABLE Inventory.Item ADD IsFeatured BIT NOT NULL CONSTRAINT DF_Item_IsFeatured DEFAULT 0;
+GO
+-- 3.4
+EXEC sys.sp_rename N'Sales.Bid.IpAddress', N'DeviceIp', N'COLUMN';
+GO
+-- 3.4: sp_rename refuses a column that a CHECK depends on, so the CHECK is
+-- dropped, the column renamed, and the CHECK added back under the new name.
+ALTER TABLE Inventory.Warehouse DROP CONSTRAINT CK_Warehouse_Capacity;
+GO
+-- 3.4
+EXEC sys.sp_rename N'Inventory.Warehouse.Capacity', N'MaxItems', N'COLUMN';
+GO
+-- 3.4
+ALTER TABLE Inventory.Warehouse ADD CONSTRAINT CK_Warehouse_MaxItems CHECK (MaxItems > 0);
+GO
+-- 3.5
+ALTER TABLE [Identity].Member ALTER COLUMN FullName NVARCHAR(150) NOT NULL;
+GO
+-- 3.6: ALTER COLUMN failed because CK_Warehouse_MaxItems depends on the column,
+-- so the CHECK is dropped first and added back after the type change.
+ALTER TABLE Inventory.Warehouse DROP CONSTRAINT CK_Warehouse_MaxItems;
+GO
+-- 3.6
+ALTER TABLE Inventory.Warehouse ALTER COLUMN MaxItems SMALLINT NOT NULL;
+GO
+-- 3.6
+ALTER TABLE Inventory.Warehouse ADD CONSTRAINT CK_Warehouse_MaxItems CHECK (MaxItems > 0 AND MaxItems <= 30000);
+GO
+-- 3.7: existing commission values must satisfy the new limit.
+ALTER TABLE Inventory.Category DROP CONSTRAINT CK_Category_CommissionRate;
+GO
+-- 3.7
+ALTER TABLE Inventory.Category ADD CONSTRAINT CK_Category_CommissionRate CHECK (CommissionRate BETWEEN 0 AND 25);
+GO
+-- 3.8
+ALTER TABLE Sales.Auction DROP CONSTRAINT CK_Auction_Status, DF_Auction_Status;
+GO
+-- 3.8
+ALTER TABLE Sales.Auction ADD CONSTRAINT CK_Auction_Status CHECK (Status IN ('Draft','Live','Ended','Cancelled','PendingReview')), CONSTRAINT DF_Auction_Status DEFAULT 'PendingReview' FOR Status;
+GO
+-- 3.9
+ALTER TABLE Sales.Auction ADD BuyNowPrice DECIMAL(12,2) NULL;
+GO
+-- 3.9: WITH CHECK validates existing rows and keeps the constraint trusted.
+-- Existing NULL prices pass; a supplied price must exceed StartingPrice.
+ALTER TABLE Sales.Auction WITH CHECK ADD CONSTRAINT CK_Auction_BuyNowPrice CHECK (BuyNowPrice > StartingPrice);
+GO
+-- 3.10: resolve any existing duplicate mobiles before adding this constraint.
+ALTER TABLE [Identity].Member ADD CONSTRAINT UQ_Member_Mobile UNIQUE (Mobile);
+GO
+-- 3.11
+ALTER TABLE [Identity].Member ADD VerifiedAt DATETIME2(3) NULL;
+GO
+-- 3.11: DROP COLUMN failed because DF_Member_IsVerified is attached to it,
+-- so the DEFAULT is dropped first.
+ALTER TABLE [Identity].Member DROP CONSTRAINT DF_Member_IsVerified;
+GO
+-- 3.11
+ALTER TABLE [Identity].Member DROP COLUMN IsVerified;
+GO
+-- 3.12
+CREATE SCHEMA Marketing;
+GO
+-- 3.12
+ALTER SCHEMA Marketing TRANSFER Sales.AuctionFollower;
+GO
+
+
