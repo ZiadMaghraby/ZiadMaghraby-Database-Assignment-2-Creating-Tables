@@ -1,3 +1,6 @@
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+GO
 CREATE DATABASE BidNile;
 GO
 USE BidNile;
@@ -74,7 +77,10 @@ CREATE TABLE Inventory.Warehouse
     ManagerMemberId UNIQUEIDENTIFIER NULL,
     ManagerStartedOn DATE NULL,
     CONSTRAINT UQ_Warehouse_Name UNIQUE (Name),
-    CONSTRAINT UQ_Warehouse_ManagerMemberId UNIQUE (ManagerMemberId),
+    -- Filtered so several warehouses can wait for a manager (NULL) at the same time;
+    -- a plain UNIQUE constraint allows only one NULL.
+    INDEX UQ_Warehouse_ManagerMemberId UNIQUE NONCLUSTERED (ManagerMemberId)
+        WHERE ManagerMemberId IS NOT NULL,
     CONSTRAINT CK_Warehouse_ManagerStartedOn CHECK
         ((ManagerMemberId IS NULL AND ManagerStartedOn IS NULL)
          OR (ManagerMemberId IS NOT NULL AND ManagerStartedOn IS NOT NULL))
