@@ -42,7 +42,7 @@ A foreign key can only reference a table that already exists. Whichever of Wareh
 2. The members who joined without an invitation, and the child categories (110, 210, 220), whose parents now exist.
 3. The invited members (their inviters now exist) and the warehouses, with no manager yet.
 4. Wallets (need members) and employees (need members and warehouses).
-5. The warehouse managers, set in Edit Top 200 Rows now that the employees exist.
+5. The warehouse managers, set with one `UPDATE` on `Inventory.Warehouse` now that the employees exist.
 6. Items (need seller, inspector, category and warehouse).
 7. Item photos and auctions (need items).
 8. Bids and followers (need auctions and members).
